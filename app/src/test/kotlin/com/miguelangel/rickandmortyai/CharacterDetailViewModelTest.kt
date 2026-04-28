@@ -15,6 +15,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
@@ -24,7 +25,7 @@ import org.junit.Test
 class CharacterDetailViewModelTest {
 
     @get:Rule
-    val mainDispatcherRule = MainDispatcherRule()
+    val mainDispatcherRule = MainDispatcherRule(StandardTestDispatcher())
 
     private val getCharacterDetail: GetCharacterDetailUseCase = mockk()
     private val getEpisodes: GetEpisodesUseCase = mockk()
@@ -95,7 +96,7 @@ class CharacterDetailViewModelTest {
             val viewModel = CharacterDetailViewModel(savedStateForId(1), getCharacterDetail, getEpisodes)
 
             viewModel.state.test {
-                awaitItem() // Loading
+                assertThat(awaitItem()).isEqualTo(CharacterDetailUiState.Loading)
                 advanceUntilIdle()
                 val success = awaitItem() as CharacterDetailUiState.Success
                 assertThat(success.episodes).isEmpty()
