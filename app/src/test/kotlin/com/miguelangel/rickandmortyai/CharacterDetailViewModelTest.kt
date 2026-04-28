@@ -1,0 +1,93 @@
+package com.miguelangel.rickandmortyai
+
+import androidx.lifecycle.SavedStateHandle
+import app.cash.turbine.test
+import com.google.common.truth.Truth.assertThat
+import com.miguelangel.rickandmortyai.domain.model.Character
+import com.miguelangel.rickandmortyai.domain.model.CharacterStatus
+import com.miguelangel.rickandmortyai.domain.model.Episode
+import com.miguelangel.rickandmortyai.domain.model.Gender
+import com.miguelangel.rickandmortyai.domain.usecase.GetCharacterDetailUseCase
+import com.miguelangel.rickandmortyai.domain.usecase.GetEpisodesUseCase
+import com.miguelangel.rickandmortyai.ui.detail.CharacterDetailUiState
+import com.miguelangel.rickandmortyai.ui.detail.CharacterDetailViewModel
+import io.mockk.coEvery
+import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class CharacterDetailViewModelTest {
+
+    private val dispatcher = StandardTestDispatcher()
+    private val getCharacterDetail: GetCharacterDetailUseCase = mockk()
+    private val getEpisodes: GetEpisodesUseCase = mockk()
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(dispatcher)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `emits Loading then Success when use cases succeed`() = runTest {
+        val character = sampleCharacter()
+        val episodes = listOf(Episode(1, "Pilot", "Dec 2, 2013", "S01E01"))
+        coEvery { getCharacterDetail(1) } returns character
+        coEvery { getEpisodes(listOf(1)) } returns episodes
+
+        val savedState = SavedStateHandle(mapOf("id" to 1))
+        val viewModel = CharacterDetailViewModel(savedState, getCharacterDetail, getEpisodes)
+
+        viewModel.state.test {
+            assertThat(awaitItem()).isEqualTo(CharacterDetailUiState.Loading)
+            dispatcher.scheduler.advanceUntilIdle()
+            val success = awaitItem()
+            assertThat(success).isInstanceOf(CharacterDetailUiState.Success::class.java)
+            success as CharacterDetailUiState.Success
+            assertThat(success.character).isEqualTo(character)
+            assertThat(success.episodes).isEqualTo(episodes)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `emits Error when character fetch fails`() = runTest {
+        coEvery { getCharacterDetail(1) } throws IllegalStateException("boom")
+
+        val savedState = SavedStateHandle(mapOf("id" to 1))
+        val viewModel = CharacterDetailViewModel(savedState, getCharacterDetail, getEpisodes)
+
+        viewModel.state.test {
+            assertThat(awaitItem()).isEqualTo(CharacterDetailUiState.Loading)
+            dispatcher.scheduler.advanceUntilIdle()
+            val error = awaitItem()
+            assertThat(error).isInstanceOf(CharacterDetailUiState.Error::class.java)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    private fun sampleCharacter() = Character(
+        id = 1,
+        name = "Rick Sanchez",
+        status = CharacterStatus.ALIVE,
+        species = "Human",
+        type = "",
+        gender = Gender.MALE,
+        origin = "Earth",
+        location = "Citadel",
+        imageUrl = "",
+        episodeIds = listOf(1),
+    )
+}

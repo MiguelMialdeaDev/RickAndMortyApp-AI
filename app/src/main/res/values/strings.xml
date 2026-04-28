@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Rick &amp; Morty AI</string>
+    <string name="characters_title">Characters</string>
+    <string name="detail_back">Back</string>
+    <string name="status_alive">Alive</string>
+    <string name="status_dead">Dead</string>
+    <string name="status_unknown">Unknown</string>
+    <string name="label_species">Species</string>
+    <string name="label_gender">Gender</string>
+    <string name="label_origin">Origin</string>
+    <string name="label_location">Last location</string>
+    <string name="section_episodes">Episodes</string>
+    <string name="error_generic">Something went wrong</string>
+    <string name="action_retry">Retry</string>
+    <string name="empty_no_characters">No characters yet</string>
+</resources>
