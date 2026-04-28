@@ -76,7 +76,7 @@ class CharacterPagingSourceTest {
 
     @Test
     fun `load passes null name when query is blank`() = runTest {
-        val response = PagedResponseDto(
+        val response = PagedResponseDto<CharacterDto>(
             info = InfoDto(next = null),
             results = emptyList(),
         )
