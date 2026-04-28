@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -28,8 +29,9 @@ class CharacterListViewModel @Inject constructor(
     val query: StateFlow<String> = _query.asStateFlow()
 
     val characters: Flow<PagingData<Character>> = _query
-        .debounce { current -> if (current.isEmpty()) 0L else SEARCH_DEBOUNCE_MS }
+        .map { it.trim() }
         .distinctUntilChanged()
+        .debounce { current -> if (current.isEmpty()) 0L else SEARCH_DEBOUNCE_MS }
         .flatMapLatest { current -> getCharacters(current) }
         .cachedIn(viewModelScope)
 
@@ -42,6 +44,6 @@ class CharacterListViewModel @Inject constructor(
     }
 
     private companion object {
-        const val SEARCH_DEBOUNCE_MS = 350L
+        const val SEARCH_DEBOUNCE_MS = 600L
     }
 }
