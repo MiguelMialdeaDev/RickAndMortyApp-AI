@@ -1,0 +1,38 @@
+package com.miguelangel.rickandmortyai.data
+
+import com.google.common.truth.Truth.assertThat
+import com.miguelangel.rickandmortyai.data.mapper.toDomain
+import com.miguelangel.rickandmortyai.data.remote.dto.EpisodeDto
+import org.junit.Test
+
+class EpisodeMapperTest {
+
+    @Test
+    fun `maps DTO to domain preserving all fields`() {
+        val dto = EpisodeDto(
+            id = 1,
+            name = "Pilot",
+            airDate = "December 2, 2013",
+            episode = "S01E01",
+        )
+
+        val episode = dto.toDomain()
+
+        assertThat(episode.id).isEqualTo(1)
+        assertThat(episode.name).isEqualTo("Pilot")
+        assertThat(episode.airDate).isEqualTo("December 2, 2013")
+        assertThat(episode.code).isEqualTo("S01E01")
+    }
+
+    @Test
+    fun `maps DTO with empty defaults`() {
+        val dto = EpisodeDto(id = 42)
+
+        val episode = dto.toDomain()
+
+        assertThat(episode.id).isEqualTo(42)
+        assertThat(episode.name).isEmpty()
+        assertThat(episode.airDate).isEmpty()
+        assertThat(episode.code).isEmpty()
+    }
+}
