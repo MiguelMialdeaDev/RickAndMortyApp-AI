@@ -35,6 +35,8 @@ class CharacterMapperTest {
         assertThat(character.status).isEqualTo(CharacterStatus.ALIVE)
         assertThat(character.gender).isEqualTo(Gender.MALE)
         assertThat(character.origin).isEqualTo("Earth (C-137)")
+        assertThat(character.location).isEqualTo("Citadel of Ricks")
+        assertThat(character.imageUrl).isEqualTo("https://example.com/1.png")
         assertThat(character.episodeIds).containsExactly(1, 2).inOrder()
     }
 
@@ -45,6 +47,33 @@ class CharacterMapperTest {
         val character = dto.toDomain()
 
         assertThat(character.status).isEqualTo(CharacterStatus.UNKNOWN)
+    }
+
+    @Test
+    fun `unknown gender falls back to UNKNOWN`() {
+        val dto = CharacterDto(id = 1, gender = "alien")
+
+        val character = dto.toDomain()
+
+        assertThat(character.gender).isEqualTo(Gender.UNKNOWN)
+    }
+
+    @Test
+    fun `dead status maps to DEAD`() {
+        val dto = CharacterDto(id = 1, status = "Dead")
+
+        val character = dto.toDomain()
+
+        assertThat(character.status).isEqualTo(CharacterStatus.DEAD)
+    }
+
+    @Test
+    fun `genderless gender maps to GENDERLESS`() {
+        val dto = CharacterDto(id = 1, gender = "Genderless")
+
+        val character = dto.toDomain()
+
+        assertThat(character.gender).isEqualTo(Gender.GENDERLESS)
     }
 
     @Test
@@ -61,5 +90,31 @@ class CharacterMapperTest {
         val character = dto.toDomain()
 
         assertThat(character.episodeIds).containsExactly(3)
+    }
+
+    @Test
+    fun `empty episode list maps to empty episodeIds`() {
+        val dto = CharacterDto(id = 1, episode = emptyList())
+
+        val character = dto.toDomain()
+
+        assertThat(character.episodeIds).isEmpty()
+    }
+
+    @Test
+    fun `defaults map cleanly when DTO has only required id`() {
+        val dto = CharacterDto(id = 7)
+
+        val character = dto.toDomain()
+
+        assertThat(character.id).isEqualTo(7)
+        assertThat(character.name).isEmpty()
+        assertThat(character.status).isEqualTo(CharacterStatus.UNKNOWN)
+        assertThat(character.species).isEmpty()
+        assertThat(character.gender).isEqualTo(Gender.UNKNOWN)
+        assertThat(character.origin).isEmpty()
+        assertThat(character.location).isEmpty()
+        assertThat(character.imageUrl).isEmpty()
+        assertThat(character.episodeIds).isEmpty()
     }
 }

@@ -32,4 +32,16 @@ class GetEpisodesUseCaseTest {
 
         assertThat(result).isEqualTo(expected)
     }
+
+    @Test
+    fun `forwards full id list to repository when many ids are passed`() = runTest {
+        val ids = listOf(1, 2, 3, 4, 5)
+        val expected = ids.map { Episode(id = it, name = "Ep$it", airDate = "", code = "") }
+        coEvery { repository.getEpisodes(ids) } returns expected
+
+        val result = useCase(ids)
+
+        assertThat(result).hasSize(5)
+        assertThat(result.map { it.id }).containsExactlyElementsIn(ids).inOrder()
+    }
 }

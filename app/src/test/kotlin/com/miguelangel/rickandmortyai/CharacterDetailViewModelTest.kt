@@ -12,6 +12,7 @@ import com.miguelangel.rickandmortyai.domain.usecase.GetEpisodesUseCase
 import com.miguelangel.rickandmortyai.ui.detail.CharacterDetailUiState
 import com.miguelangel.rickandmortyai.ui.detail.CharacterDetailViewModel
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -41,21 +42,18 @@ class CharacterDetailViewModelTest {
     }
 
     @Test
-    fun `emits Loading then Success when use cases succeed`() = runTest {
+    fun `emits Loading then Success when use cases succeed`() = runTest(dispatcher) {
         val character = sampleCharacter()
         val episodes = listOf(Episode(1, "Pilot", "Dec 2, 2013", "S01E01"))
         coEvery { getCharacterDetail(1) } returns character
         coEvery { getEpisodes(listOf(1)) } returns episodes
 
-        val savedState = SavedStateHandle(mapOf("id" to 1))
-        val viewModel = CharacterDetailViewModel(savedState, getCharacterDetail, getEpisodes)
+        val viewModel = CharacterDetailViewModel(savedStateForId(1), getCharacterDetail, getEpisodes)
 
         viewModel.state.test {
             assertThat(awaitItem()).isEqualTo(CharacterDetailUiState.Loading)
             dispatcher.scheduler.advanceUntilIdle()
-            val success = awaitItem()
-            assertThat(success).isInstanceOf(CharacterDetailUiState.Success::class.java)
-            success as CharacterDetailUiState.Success
+            val success = awaitItem() as CharacterDetailUiState.Success
             assertThat(success.character).isEqualTo(character)
             assertThat(success.episodes).isEqualTo(episodes)
             cancelAndIgnoreRemainingEvents()
@@ -63,20 +61,82 @@ class CharacterDetailViewModelTest {
     }
 
     @Test
-    fun `emits Error when character fetch fails`() = runTest {
+    fun `emits Error when character fetch fails`() = runTest(dispatcher) {
         coEvery { getCharacterDetail(1) } throws IllegalStateException("boom")
 
-        val savedState = SavedStateHandle(mapOf("id" to 1))
-        val viewModel = CharacterDetailViewModel(savedState, getCharacterDetail, getEpisodes)
+        val viewModel = CharacterDetailViewModel(savedStateForId(1), getCharacterDetail, getEpisodes)
 
         viewModel.state.test {
             assertThat(awaitItem()).isEqualTo(CharacterDetailUiState.Loading)
             dispatcher.scheduler.advanceUntilIdle()
             val error = awaitItem()
             assertThat(error).isInstanceOf(CharacterDetailUiState.Error::class.java)
+            assertThat((error as CharacterDetailUiState.Error).message).isEqualTo("boom")
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun `emits Success with empty episodes when episodes fetch fails`() = runTest(dispatcher) {
+        val character = sampleCharacter()
+        coEvery { getCharacterDetail(1) } returns character
+        coEvery { getEpisodes(any()) } throws IllegalStateException("episodes-down")
+
+        val viewModel = CharacterDetailViewModel(savedStateForId(1), getCharacterDetail, getEpisodes)
+
+        viewModel.state.test {
+            assertThat(awaitItem()).isEqualTo(CharacterDetailUiState.Loading)
+            dispatcher.scheduler.advanceUntilIdle()
+            val success = awaitItem() as CharacterDetailUiState.Success
+            assertThat(success.character).isEqualTo(character)
+            assertThat(success.episodes).isEmpty()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `does not call getEpisodes when character has no episodes`() = runTest(dispatcher) {
+        val character = sampleCharacter().copy(episodeIds = emptyList())
+        coEvery { getCharacterDetail(1) } returns character
+        coEvery { getEpisodes(emptyList()) } returns emptyList()
+
+        val viewModel = CharacterDetailViewModel(savedStateForId(1), getCharacterDetail, getEpisodes)
+
+        viewModel.state.test {
+            awaitItem() // Loading
+            dispatcher.scheduler.advanceUntilIdle()
+            val success = awaitItem() as CharacterDetailUiState.Success
+            assertThat(success.episodes).isEmpty()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `retry resets to Loading and refetches`() = runTest(dispatcher) {
+        val character = sampleCharacter()
+        coEvery { getCharacterDetail(1) } throws IllegalStateException("boom") andThen character
+        coEvery { getEpisodes(any()) } returns emptyList()
+
+        val viewModel = CharacterDetailViewModel(savedStateForId(1), getCharacterDetail, getEpisodes)
+
+        viewModel.state.test {
+            assertThat(awaitItem()).isEqualTo(CharacterDetailUiState.Loading)
+            dispatcher.scheduler.advanceUntilIdle()
+            assertThat(awaitItem()).isInstanceOf(CharacterDetailUiState.Error::class.java)
+
+            viewModel.retry()
+            assertThat(awaitItem()).isEqualTo(CharacterDetailUiState.Loading)
+            dispatcher.scheduler.advanceUntilIdle()
+            val success = awaitItem() as CharacterDetailUiState.Success
+            assertThat(success.character).isEqualTo(character)
+
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        coVerify(exactly = 2) { getCharacterDetail(1) }
+    }
+
+    private fun savedStateForId(id: Int) = SavedStateHandle(mapOf("id" to id))
 
     private fun sampleCharacter() = Character(
         id = 1,

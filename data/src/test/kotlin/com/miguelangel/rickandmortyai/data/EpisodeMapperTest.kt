@@ -35,4 +35,14 @@ class EpisodeMapperTest {
         assertThat(episode.airDate).isEmpty()
         assertThat(episode.code).isEmpty()
     }
+
+    @Test
+    fun `code field comes from episode field of DTO`() {
+        val dto = EpisodeDto(id = 28, name = "The Ricklantis Mixup", airDate = "September 10, 2017", episode = "S03E07")
+
+        val episode = dto.toDomain()
+
+        assertThat(episode.code).isEqualTo("S03E07")
+        assertThat(episode.name).isEqualTo("The Ricklantis Mixup")
+    }
 }
