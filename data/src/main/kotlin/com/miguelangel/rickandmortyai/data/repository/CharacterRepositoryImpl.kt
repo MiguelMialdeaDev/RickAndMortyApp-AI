@@ -11,21 +11,19 @@ import com.miguelangel.rickandmortyai.domain.model.Episode
 import com.miguelangel.rickandmortyai.domain.repository.CharacterRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
-import javax.inject.Provider
 
 internal class CharacterRepositoryImpl @Inject constructor(
     private val api: RickAndMortyApi,
-    private val pagingSourceProvider: Provider<CharacterPagingSource>,
 ) : CharacterRepository {
 
-    override fun getCharacters(): Flow<PagingData<Character>> = Pager(
+    override fun getCharacters(query: String): Flow<PagingData<Character>> = Pager(
         config = PagingConfig(
             pageSize = UI_PAGE_SIZE,
             prefetchDistance = UI_PAGE_SIZE / 2,
             enablePlaceholders = false,
             initialLoadSize = UI_PAGE_SIZE * 2,
         ),
-        pagingSourceFactory = { pagingSourceProvider.get() },
+        pagingSourceFactory = { CharacterPagingSource(api, query) },
     ).flow
 
     override suspend fun getCharacter(id: Int): Character = api.getCharacter(id).toDomain()
@@ -39,9 +37,6 @@ internal class CharacterRepositoryImpl @Inject constructor(
     }
 
     private companion object {
-        // UI muestra 10 por página. La API devuelve 20 fijos por página de red.
-        // Paging 3 trocea internamente lo que devuelve el PagingSource en bloques
-        // de pageSize para entregarlos a la UI.
         const val UI_PAGE_SIZE = 10
     }
 }

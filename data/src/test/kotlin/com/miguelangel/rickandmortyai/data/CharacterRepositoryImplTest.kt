@@ -3,7 +3,6 @@ package com.miguelangel.rickandmortyai.data
 import androidx.paging.PagingData
 import androidx.paging.testing.asSnapshot
 import com.google.common.truth.Truth.assertThat
-import com.miguelangel.rickandmortyai.data.paging.CharacterPagingSource
 import com.miguelangel.rickandmortyai.data.remote.RickAndMortyApi
 import com.miguelangel.rickandmortyai.data.remote.dto.CharacterDto
 import com.miguelangel.rickandmortyai.data.remote.dto.EpisodeDto
@@ -15,13 +14,11 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
-import javax.inject.Provider
 
 class CharacterRepositoryImplTest {
 
     private val api: RickAndMortyApi = mockk()
-    private val pagingSourceProvider = Provider<CharacterPagingSource> { CharacterPagingSource(api) }
-    private val repository = CharacterRepositoryImpl(api, pagingSourceProvider)
+    private val repository = CharacterRepositoryImpl(api)
 
     @Test
     fun `getCharacter delegates to api and maps to domain`() = runTest {
@@ -71,22 +68,35 @@ class CharacterRepositoryImplTest {
 
     @Test
     fun `getCharacters emits items from paging in UI page sizes of 10`() = runTest {
-        coEvery { api.getCharacters(page = 1) } returns PagedResponseDto(
+        coEvery { api.getCharacters(page = 1, name = null) } returns PagedResponseDto(
             info = InfoDto(next = "https://rickandmortyapi.com/api/character?page=2"),
             results = (1..20).map { CharacterDto(id = it, name = "C$it") },
         )
-        coEvery { api.getCharacters(page = 2) } returns PagedResponseDto(
+        coEvery { api.getCharacters(page = 2, name = null) } returns PagedResponseDto(
             info = InfoDto(next = null),
             results = (21..40).map { CharacterDto(id = it, name = "C$it") },
         )
 
         val flow: kotlinx.coroutines.flow.Flow<PagingData<com.miguelangel.rickandmortyai.domain.model.Character>> =
-            repository.getCharacters()
+            repository.getCharacters("")
 
         val snapshot = flow.asSnapshot { scrollTo(index = 25) }
 
         assertThat(snapshot).hasSize(40)
         assertThat(snapshot.first().id).isEqualTo(1)
         assertThat(snapshot.last().id).isEqualTo(40)
+    }
+
+    @Test
+    fun `getCharacters propagates query as name filter`() = runTest {
+        coEvery { api.getCharacters(page = 1, name = "rick") } returns PagedResponseDto(
+            info = InfoDto(next = null),
+            results = listOf(CharacterDto(id = 1, name = "Rick Sanchez")),
+        )
+
+        val snapshot = repository.getCharacters("rick").asSnapshot()
+
+        assertThat(snapshot.map { it.id }).containsExactly(1)
+        coVerify(exactly = 1) { api.getCharacters(page = 1, name = "rick") }
     }
 }

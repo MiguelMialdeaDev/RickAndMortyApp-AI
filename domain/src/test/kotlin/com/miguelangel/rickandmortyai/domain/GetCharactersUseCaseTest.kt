@@ -19,13 +19,24 @@ class GetCharactersUseCaseTest {
     private val useCase = GetCharactersUseCase(repository)
 
     @Test
-    fun `delegates to repository getCharacters`() = runTest {
+    fun `delegates to repository getCharacters with empty query by default`() = runTest {
         val expected: Flow<PagingData<Character>> = flowOf(PagingData.empty())
-        every { repository.getCharacters() } returns expected
+        every { repository.getCharacters("") } returns expected
 
         val result = useCase()
 
         assertThat(result).isSameInstanceAs(expected)
-        verify(exactly = 1) { repository.getCharacters() }
+        verify(exactly = 1) { repository.getCharacters("") }
+    }
+
+    @Test
+    fun `forwards query to repository`() = runTest {
+        val expected: Flow<PagingData<Character>> = flowOf(PagingData.empty())
+        every { repository.getCharacters("rick") } returns expected
+
+        val result = useCase("rick")
+
+        assertThat(result).isSameInstanceAs(expected)
+        verify(exactly = 1) { repository.getCharacters("rick") }
     }
 }

@@ -14,4 +14,7 @@
     <string name="error_generic">Something went wrong</string>
     <string name="action_retry">Retry</string>
     <string name="empty_no_characters">No characters yet</string>
+    <string name="search_hint">Search characters</string>
+    <string name="search_clear">Clear</string>
+    <string name="empty_no_results">No characters match \"%1$s\"</string>
 </resources>

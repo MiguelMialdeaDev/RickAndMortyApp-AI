@@ -10,6 +10,7 @@ import com.miguelangel.rickandmortyai.domain.usecase.GetCharactersUseCase
 import com.miguelangel.rickandmortyai.ui.list.CharacterListViewModel
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -40,7 +41,7 @@ class CharacterListViewModelTest {
     @Test
     fun `exposes paging flow with characters from use case`() = runTest {
         val data = (1..3).map { sampleCharacter(it) }
-        every { getCharacters() } returns flowOf(PagingData.from(data))
+        every { getCharacters("") } returns flowOf(PagingData.from(data))
 
         val viewModel = CharacterListViewModel(getCharacters)
 
@@ -51,13 +52,50 @@ class CharacterListViewModelTest {
 
     @Test
     fun `exposes empty paging when use case returns empty data`() = runTest {
-        every { getCharacters() } returns flowOf(PagingData.empty())
+        every { getCharacters("") } returns flowOf(PagingData.empty())
 
         val viewModel = CharacterListViewModel(getCharacters)
 
         val snapshot = viewModel.characters.asSnapshot()
 
         assertThat(snapshot).isEmpty()
+    }
+
+    @Test
+    fun `query state updates immediately on onQueryChange`() = runTest {
+        every { getCharacters(any()) } returns flowOf(PagingData.empty())
+
+        val viewModel = CharacterListViewModel(getCharacters)
+        viewModel.onQueryChange("morty")
+
+        assertThat(viewModel.query.value).isEqualTo("morty")
+    }
+
+    @Test
+    fun `onClearQuery resets query to empty`() = runTest {
+        every { getCharacters(any()) } returns flowOf(PagingData.empty())
+
+        val viewModel = CharacterListViewModel(getCharacters)
+        viewModel.onQueryChange("rick")
+        viewModel.onClearQuery()
+
+        assertThat(viewModel.query.value).isEqualTo("")
+    }
+
+    @Test
+    fun `paging flow refetches with new query after debounce`() = runTest {
+        every { getCharacters("") } returns flowOf(PagingData.empty())
+        every { getCharacters("rick") } returns flowOf(
+            PagingData.from(listOf(sampleCharacter(1).copy(name = "Rick"))),
+        )
+
+        val viewModel = CharacterListViewModel(getCharacters)
+        viewModel.onQueryChange("rick")
+
+        val snapshot = viewModel.characters.asSnapshot()
+
+        assertThat(snapshot.map { it.name }).containsExactly("Rick")
+        verify { getCharacters("rick") }
     }
 
     private fun sampleCharacter(id: Int) = Character(

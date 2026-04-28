@@ -7,16 +7,17 @@ import com.miguelangel.rickandmortyai.data.remote.RickAndMortyApi
 import com.miguelangel.rickandmortyai.domain.model.Character
 import retrofit2.HttpException
 import java.io.IOException
-import javax.inject.Inject
 
-class CharacterPagingSource @Inject constructor(
+internal class CharacterPagingSource(
     private val api: RickAndMortyApi,
+    private val query: String,
 ) : PagingSource<Int, Character>() {
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Character> {
         val apiPage = params.key ?: STARTING_API_PAGE
+        val nameFilter = query.trim().takeIf { it.isNotEmpty() }
         return try {
-            val response = api.getCharacters(page = apiPage)
+            val response = api.getCharacters(page = apiPage, name = nameFilter)
             LoadResult.Page(
                 data = response.results.map { it.toDomain() },
                 prevKey = if (apiPage == STARTING_API_PAGE) null else apiPage - 1,
@@ -25,7 +26,15 @@ class CharacterPagingSource @Inject constructor(
         } catch (e: IOException) {
             LoadResult.Error(e)
         } catch (e: HttpException) {
-            LoadResult.Error(e)
+            if (e.code() == HTTP_NOT_FOUND) {
+                LoadResult.Page(
+                    data = emptyList(),
+                    prevKey = if (apiPage == STARTING_API_PAGE) null else apiPage - 1,
+                    nextKey = null,
+                )
+            } else {
+                LoadResult.Error(e)
+            }
         }
     }
 
@@ -38,5 +47,6 @@ class CharacterPagingSource @Inject constructor(
 
     private companion object {
         const val STARTING_API_PAGE = 1
+        const val HTTP_NOT_FOUND = 404
     }
 }

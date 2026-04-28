@@ -7,9 +7,12 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
@@ -22,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -43,6 +47,7 @@ import com.miguelangel.rickandmortyai.ui.components.CharacterCard
 import com.miguelangel.rickandmortyai.ui.components.EmptyState
 import com.miguelangel.rickandmortyai.ui.components.ErrorState
 import com.miguelangel.rickandmortyai.ui.components.LoadingState
+import com.miguelangel.rickandmortyai.ui.components.SearchField
 
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -53,6 +58,7 @@ internal fun CharacterListScreen(
     viewModel: CharacterListViewModel = hiltViewModel(),
 ) {
     val items = viewModel.characters.collectAsLazyPagingItems()
+    val query by viewModel.query.collectAsState()
     val listState = rememberLazyListState()
     val seenIds = remember { HashSet<Int>() }
 
@@ -86,37 +92,47 @@ internal fun CharacterListScreen(
             )
         },
     ) { padding ->
-        when (val refresh = items.loadState.refresh) {
-            is LoadState.Loading -> if (items.itemCount == 0) {
-                LoadingState(modifier = Modifier.padding(padding))
-            } else {
-                CharacterList(
-                    padding = padding,
-                    sharedTransitionScope = sharedTransitionScope,
-                    animatedContentScope = animatedContentScope,
-                    items = items,
-                    listState = listState,
-                    seenIds = seenIds,
-                    onCharacterClick = onCharacterClick,
-                )
-            }
-            is LoadState.Error -> ErrorState(
-                onRetry = items::retry,
-                modifier = Modifier.padding(padding),
-                message = refresh.error.message,
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            SearchField(
+                value = query,
+                onValueChange = viewModel::onQueryChange,
+                onClear = viewModel::onClearQuery,
             )
-            else -> if (items.itemCount == 0) {
-                EmptyState(modifier = Modifier.padding(padding))
-            } else {
-                CharacterList(
-                    padding = padding,
-                    sharedTransitionScope = sharedTransitionScope,
-                    animatedContentScope = animatedContentScope,
-                    items = items,
-                    listState = listState,
-                    seenIds = seenIds,
-                    onCharacterClick = onCharacterClick,
+            Spacer(modifier = Modifier.height(8.dp))
+
+            when (val refresh = items.loadState.refresh) {
+                is LoadState.Loading -> if (items.itemCount == 0) {
+                    LoadingState()
+                } else {
+                    CharacterList(
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedContentScope = animatedContentScope,
+                        items = items,
+                        listState = listState,
+                        seenIds = seenIds,
+                        onCharacterClick = onCharacterClick,
+                    )
+                }
+                is LoadState.Error -> ErrorState(
+                    onRetry = items::retry,
+                    message = refresh.error.message,
                 )
+                else -> if (items.itemCount == 0) {
+                    EmptyState(
+                        text = if (query.isNotEmpty()) {
+                            stringResource(R.string.empty_no_results, query)
+                        } else null,
+                    )
+                } else {
+                    CharacterList(
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedContentScope = animatedContentScope,
+                        items = items,
+                        listState = listState,
+                        seenIds = seenIds,
+                        onCharacterClick = onCharacterClick,
+                    )
+                }
             }
         }
     }
@@ -125,7 +141,6 @@ internal fun CharacterListScreen(
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun CharacterList(
-    padding: PaddingValues,
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedVisibilityScope,
     items: LazyPagingItems<Character>,
@@ -135,9 +150,7 @@ private fun CharacterList(
 ) {
     LazyColumn(
         state = listState,
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(padding),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {

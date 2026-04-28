@@ -52,15 +52,17 @@ internal fun ErrorState(
 }
 
 @Composable
-internal fun EmptyState(modifier: Modifier = Modifier) {
+internal fun EmptyState(
+    modifier: Modifier = Modifier,
+    text: String? = null,
+) {
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = stringResource(R.string.empty_no_characters),
-            style = MaterialTheme.
-            typography.titleMedium,
+            text = text ?: stringResource(R.string.empty_no_characters),
+            style = MaterialTheme.typography.titleMedium,
         )
     }
 }
