@@ -59,7 +59,8 @@ internal fun EmptyState(modifier: Modifier = Modifier) {
     ) {
         Text(
             text = stringResource(R.string.empty_no_characters),
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.
+            typography.titleMedium,
         )
     }
 }

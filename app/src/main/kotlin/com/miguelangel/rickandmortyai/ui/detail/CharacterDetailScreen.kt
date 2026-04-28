@@ -37,10 +37,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.size.Size
 import com.miguelangel.rickandmortyai.R
 import com.miguelangel.rickandmortyai.domain.model.Character
 import com.miguelangel.rickandmortyai.domain.model.Episode
@@ -118,7 +121,12 @@ private fun DetailContent(
             item {
                 Box {
                     AsyncImage(
-                        model = character.imageUrl,
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(character.imageUrl)
+                            .memoryCacheKey(character.imageUrl)
+                            .diskCacheKey(character.imageUrl)
+                            .size(Size.ORIGINAL)
+                            .build(),
                         contentDescription = character.name,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier

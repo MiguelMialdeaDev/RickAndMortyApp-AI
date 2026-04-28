@@ -7,11 +7,14 @@ import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import coil.request.CachePolicy
 import dagger.hilt.android.HiltAndroidApp
+import okhttp3.Dispatcher
+import okhttp3.OkHttpClient
 
 @HiltAndroidApp
 class RickAndMortyApplication : Application(), ImageLoaderFactory {
 
     override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)
+        .okHttpClient { buildImageOkHttpClient() }
         .crossfade(true)
         .memoryCachePolicy(CachePolicy.ENABLED)
         .diskCachePolicy(CachePolicy.ENABLED)
@@ -27,5 +30,14 @@ class RickAndMortyApplication : Application(), ImageLoaderFactory {
                 .maxSizeBytes(100L * 1024 * 1024)
                 .build()
         }
+        .build()
+
+    private fun buildImageOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
+        .dispatcher(
+            Dispatcher().apply {
+                maxRequests = 64
+                maxRequestsPerHost = 20
+            },
+        )
         .build()
 }

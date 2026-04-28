@@ -17,16 +17,23 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import coil.size.Size
 import com.miguelangel.rickandmortyai.domain.model.Character
+import com.miguelangel.rickandmortyai.domain.model.CharacterStatus
+import com.miguelangel.rickandmortyai.ui.theme.StatusAlive
+import com.miguelangel.rickandmortyai.ui.theme.StatusDead
+import com.miguelangel.rickandmortyai.ui.theme.StatusUnknown
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -50,15 +57,27 @@ internal fun CharacterCard(
                 modifier = Modifier.padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                val placeholderPainter = remember(character.status) {
+                    val color = when (character.status) {
+                        CharacterStatus.ALIVE -> StatusAlive
+                        CharacterStatus.DEAD -> StatusDead
+                        CharacterStatus.UNKNOWN -> StatusUnknown
+                    }
+                    ColorPainter(color.copy(alpha = 0.2f))
+                }
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(character.imageUrl)
                         .memoryCacheKey(character.imageUrl)
                         .diskCacheKey(character.imageUrl)
+                        .size(Size.ORIGINAL)
                         .crossfade(false)
                         .build(),
                     contentDescription = character.name,
                     contentScale = ContentScale.Crop,
+                    placeholder = placeholderPainter,
+                    error = placeholderPainter,
+                    fallback = placeholderPainter,
                     modifier = Modifier
                         .sharedElement(
                             state = rememberSharedContentState(key = "image-${character.id}"),

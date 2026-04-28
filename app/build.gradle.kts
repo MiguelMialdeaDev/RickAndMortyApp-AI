@@ -67,6 +67,7 @@ dependencies {
     implementation(libs.androidx.paging.compose)
 
     implementation(libs.coil.compose)
+    implementation(libs.okhttp)
 
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)
