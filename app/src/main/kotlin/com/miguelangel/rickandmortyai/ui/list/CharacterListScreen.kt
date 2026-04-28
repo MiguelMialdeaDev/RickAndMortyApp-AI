@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -33,6 +34,9 @@ import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
+import coil.imageLoader
+import coil.request.ImageRequest
+import coil.size.Size
 import com.miguelangel.rickandmortyai.R
 import com.miguelangel.rickandmortyai.domain.model.Character
 import com.miguelangel.rickandmortyai.ui.components.CharacterCard
@@ -51,6 +55,24 @@ internal fun CharacterListScreen(
     val items = viewModel.characters.collectAsLazyPagingItems()
     val listState = rememberLazyListState()
     val seenIds = remember { HashSet<Int>() }
+
+    val context = LocalContext.current
+    val prefetchedUrls = remember { HashSet<String>() }
+    LaunchedEffect(items.itemCount) {
+        val loader = context.imageLoader
+        items.itemSnapshotList.items.forEach { character ->
+            if (character.imageUrl.isNotEmpty() && prefetchedUrls.add(character.imageUrl)) {
+                loader.enqueue(
+                    ImageRequest.Builder(context)
+                        .data(character.imageUrl)
+                        .memoryCacheKey(character.imageUrl)
+                        .diskCacheKey(character.imageUrl)
+                        .size(Size.ORIGINAL)
+                        .build(),
+                )
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
